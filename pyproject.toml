@@ -10,6 +10,7 @@ packages = [{include = "hw9_personal_assistant_with_sqlalchemy_and_alembic"}]
 python = "^3.10"
 sqlalchemy = "^1.4.45"
 alembic = "^1.9.0"
+faker = "^15.3.4"
 
 
 [build-system]

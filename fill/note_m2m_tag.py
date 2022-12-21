@@ -1,23 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql.sqltypes import DateTime
-from datetime import datetime
-
-from assistant.assistant.database.db import Base
-
-
-class Contact(Base):
-    __tablename__ = 'contacts'
-    id = Column(Integer, primary_key=True)
-    full_name = Column(String(120), nullable=False)
-    email = Column('email', String(100))
-    cell_phone = Column('cell_phone', String(100))
-    address = Column('address', String(100))
-    birthday = Column('birthday', Date)
-
-
-class Note(Base):
-    __tablename__ = 'notes'
+def create_note():
+    for
     id = Column(Integer, primary_key=True)
     title = Column(String(250), nullable=False)
     description = Column(String(500), nullable=False)
@@ -37,5 +19,3 @@ class NoteTag(Base):
     id = Column(Integer, primary_key=True)
     note_id = Column('note_id', ForeignKey('notes.id', ondelete='CASCADE'))
     tag_id = Column('tag_id', ForeignKey('tags.id', ondelete='CASCADE'))
-
-
