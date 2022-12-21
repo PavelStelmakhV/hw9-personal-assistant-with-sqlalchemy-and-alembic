@@ -1,6 +1,6 @@
 from faker import Faker
 
-from assistant.assistant.database.models import Contact, Note, Tag, NoteTag
+from assistant.assistant.database.models import Contact
 from assistant.assistant.database.db import session
 
 
@@ -8,7 +8,7 @@ fake = Faker('ru-RU')
 count_contact = 20
 
 
-def create_contact():
+def create_contacts():
     for _ in range(count_contact):
         contact = Contact(
             full_name=fake.name(),
@@ -21,5 +21,15 @@ def create_contact():
     session.commit()
 
 
+def fill_date():
+    contacts = session.query(Contact).all()
+    for contact in contacts:
+        contact.birthday = fake.date_between(start_date="-50y", end_date='-15y')
+        session.add(contact)
+    session.commit()
+
+
 if __name__ == '__main__':
-    create_contact()
+    create_contacts()
+    # fill_date()
+    session.close()
