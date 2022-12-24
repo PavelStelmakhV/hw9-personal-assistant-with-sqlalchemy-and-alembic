@@ -11,9 +11,17 @@ class Contact(Base):
     id = Column(Integer, primary_key=True)
     full_name = Column(String(120), nullable=False)
     email = Column('email', String(100))
-    cell_phone = Column('cell_phone', String(100))
     address = Column('address', String(100))
     birthday = Column('birthday', Date)
+    phones = relationship('Phone', back_populates='contact')
+
+
+class Phone(Base):
+    __tablename__ = 'phones'
+    id = Column(Integer, primary_key=True)
+    cell_phone = Column('cell_phone', String(100))
+    contact_id = Column(Integer, ForeignKey('contacts.id'))
+    contact = relationship('Contact', back_populates='phones')
 
 
 class Note(Base):
