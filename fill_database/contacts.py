@@ -43,7 +43,7 @@ def create_phones():
 
 
 if __name__ == '__main__':
-    # create_contacts()
+    create_contacts()
     # fill_date()
     create_phones()
     session.close()

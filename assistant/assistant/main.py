@@ -5,7 +5,8 @@
 # from assistant import parser
 # from assistant.decorators import *
 
-import contact_book
+# import contact_book
+from contact_book import Name, Phone, Address, Birthday, Email, AddressBook, Record
 import note_book
 import help
 import sort
@@ -38,7 +39,7 @@ class CLIInputOutput(AbstractInputOutput):
 
 class InputOutput:
     def __init__(self):
-        self.contactbook: contact_book.AddressBook = None
+        self.contactbook: AddressBook = None
         self.notebook: note_book.Notebook = None
         self._sortfolder = sort.SortFolder()
         self._parsers = parser.Parsers()
@@ -72,7 +73,7 @@ class InputOutput:
         else:
             tag = self._io.user_input('input remove tag: ')
             return self.notebook.edit_note_tag_del(argument, tag)
-# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     @command_handler
     def note_edit_handler(self, name_note: str) -> str:
@@ -104,72 +105,101 @@ class InputOutput:
 
     @command_handler
     def contact_add_handler(self, argument: str) -> str:
-        result = []
-        self.contactbook.add_record(contact_book.Name(argument))
-
-        result.append(f'Added record {argument}.')
-        result.append(self._add_phone(argument))
-        result.append(self._add_address(argument))
-        result.append(self._add_email(argument))
-        result.append(self._add_birthday(argument))
-        self.contactbook.save_book()
-        return ' '.join(result)
+        name = Name(argument)
+        phone = self._get_phone()
+        address = self._get_address()
+        email = self._get_email()
+        birthday = self._get_birthday()
+        result = self.contactbook.add_record(name=name, phone=phone, address=address, email=email, birthday=birthday)
+        return result
 
     @command_handler
-    def contact_edit_handler(self, argument: str) -> str:
-        self.contactbook.edit_record(contact_book.Name(argument))
-
-        self._io.user_output('1. Add phone\n2. Delete phone\n3. Change phone\n4. Change address\n5. Change E-mail\n6. Change birthday')
-        num_choose = self._io.user_input('Choose a number: ')
-        operation_with_record =['_add_phone', '_del_phone', '_change_phone', '_add_address', '_add_email', '_add_birthday']
-        self._io.user_output(operation_with_record[int(num_choose)-1])
-        command_function = getattr(self, operation_with_record[int(num_choose)-1])
-        result = command_function(argument)
-        self.contactbook.save_book()
-        return f'Edited record {argument}. {result}'
-    # --------------------------------------------
-
-    @command_handler
-    def _add_phone(self, argument: str) -> str:
-        num_phone = self._io.user_input('Input phone: ')
+    def _get_phone(self, new_old: str = None) -> Phone:
+        num_phone = self._io.user_input(f'Input {new_old} phone (format +XXXXXXXXXXXX): ')
         if num_phone is not None:
-            return self.contactbook[contact_book.Name(argument).value].add_phone(contact_book.Phone(num_phone))
+            return Phone(num_phone)
 
     @command_handler
-    def _del_phone(self, argument: str) -> str:
-        num_phone = self._io.user_input('Enter phone number to delete: ')
-        return self.contactbook[contact_book.Name(argument).value].delete_phone(contact_book.Phone(num_phone))
-
-    @command_handler
-    def _change_phone(self, argument: str) -> str:
-        change_phone = self._io.user_input('Enter phone number to change: ')
-        new_phone = self._io.user_input('Enter new phone: ')
-        return self.contactbook[contact_book.Name(argument).value].change_phone(contact_book.Phone(change_phone), contact_book.Phone(new_phone))
-
-    @command_handler
-    def _add_address(self, argument: str) -> str:
+    def _get_address(self) -> Address:
         address = self._io.user_input('Input address: ')
         if address is not None:
-            return self.contactbook[contact_book.Name(argument).value].set_address(contact_book.Address(address))
+            return Address(address)
 
     @command_handler
-    def _add_email(self, argument: str) -> str:
+    def _get_email(self) -> Email:
         email = self._io.user_input('Input email: ')
         if email is not None:
-            return self.contactbook[contact_book.Name(argument).value].set_email(contact_book.Email(email))
+            return Email(email)
 
     @command_handler
-    def _add_birthday(self, argument: str) -> str:
+    def _get_birthday(self) -> Birthday:
         birthday = self._io.user_input('Input birthday: ')
         if birthday is not None:
-            return self.contactbook[contact_book.Name(argument).value].set_birthday(contact_book.Birthday(birthday))
+            return Birthday(birthday)
+
+    # --------------------------------------------
+    @command_handler
+    def contact_edit_handler(self, argument: str) -> str:
+        name = Name(argument)
+        record = Record(name)
+        if not record.exist_record():
+            return f'Contact with this name does not exist.'
+
+        self._io.user_output('1. Add phone\n2. Delete phone\n3. Change phone\n4. Change address\n5. Change E-mail'
+                             '\n6. Change birthday')
+        num_choose = self._io.user_input('Choose a number: ')
+        operation_with_record = ['_add_phone', '_remove_phone', '_change_phone', '_add_address', '_add_email',
+                                 '_add_birthday']
+        self._io.user_output(operation_with_record[int(num_choose)-1])
+        command_function = getattr(self, operation_with_record[int(num_choose)-1])
+        result = command_function(name)
+
+        return f'Edited record {argument}. {result}'
     # ------------------------------------------------------------
 
     @command_handler
+    def _add_phone(self, name: Name) -> str:
+        new_phone = self._get_phone(new_old='new')
+        if new_phone is not None:
+            return self.contactbook.edit_record(operation='_add_phone', name=name, new_phone=new_phone)
+
+    @command_handler
+    def _remove_phone(self, name: Name) -> str:
+        old_phone = self._get_phone(new_old='removable')
+        if old_phone is not None:
+            return self.contactbook.edit_record(operation='_change_phone', name=name, old_phone=old_phone)
+
+    @command_handler
+    def _change_phone(self, name: Name) -> str:
+        old_phone = self._get_phone(new_old='removable')
+        new_phone = self._get_phone(new_old='new')
+        if (old_phone is not None) and (new_phone is not None):
+            return self.contactbook.edit_record(operation='_del_phone', name=name, old_phone=old_phone,
+                                                new_phone=new_phone)
+
+    @command_handler
+    def _add_address(self, name: Name) -> str:
+        address = self._get_address()
+        if address is not None:
+            return self.contactbook.edit_record(operation='_add_phone', name=name, address=address)
+
+    @command_handler
+    def _add_email(self, name: Name) -> str:
+        email = self._get_email()
+        if email is not None:
+            return self.contactbook.edit_record(operation='_add_phone', name=name, email=email)
+
+    @command_handler
+    def _get_birthday(self, name: Name) -> str:
+        birthday = self._get_birthday()
+        if birthday is not None:
+            return self.contactbook.edit_record(operation='_add_phone', name=name, birthday=birthday)
+
+    #*********************************************
+
+    @command_handler
     def contact_del_handler(self, argument: str) -> str:
-        self.contactbook.del_record(contact_book.Name(argument))
-        self.contactbook.save_book()
-        return f'Deleted record {argument}'
+        return self.contactbook.remove_record(name=Name(argument))
 
     @command_handler
     def contact_find_handler(self, argument: str) -> str:

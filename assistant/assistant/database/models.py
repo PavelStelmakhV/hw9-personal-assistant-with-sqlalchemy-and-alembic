@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.sqltypes import DateTime
 from datetime import datetime
@@ -20,7 +20,7 @@ class Phone(Base):
     __tablename__ = 'phones'
     id = Column(Integer, primary_key=True)
     cell_phone = Column('cell_phone', String(100))
-    contact_id = Column(Integer, ForeignKey('contacts.id'))
+    contact_id = Column('contact_id', ForeignKey('contacts.id', ondelete='CASCADE'))
     contact = relationship('Contact', back_populates='phones')
 
 
