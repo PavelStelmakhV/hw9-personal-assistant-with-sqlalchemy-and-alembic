@@ -2,6 +2,8 @@ from collections import UserDict
 import pickle
 from pathlib import Path
 
+from assistant.assistant.database import crud_note
+
 
 class Note:
     def __init__(self, name: str, text_note: str = None):
@@ -17,7 +19,7 @@ class Note:
         if len(self.tags) > 0:
             tag_string = '><'.join(self.tags)
             tag_string = '<' + tag_string + '>'
-        result = f'\nNote: {self.__name}\nTag: {tag_string}\n{self.__text_note}'
+        result = f'\nTitle: {self.__name}\nTag: {tag_string}\n{self.__text_note}'
         return result
 
     @property
@@ -55,11 +57,8 @@ class Note:
 
 
 class Notebook(UserDict):
-    __path = Path('~').expanduser()
-    __file_name = __path / 'note_book.pickle'
 
     def __enter__(self):
-        self.__load_book()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -69,94 +68,136 @@ class Notebook(UserDict):
         self.__save_book()
 
     def __load_book(self):
-        try:
-            with open(self.__file_name, 'rb') as file:
-                book = pickle.load(file)
-                self.data.update(book)
-        except FileNotFoundError:
-            pass
+        pass
 
     def __save_book(self):
-        try:
-            with open(self.__file_name, 'wb') as file:
-                pickle.dump(self.data, file, protocol=pickle.HIGHEST_PROTOCOL)
-        except Exception:
-            print("Some problems! Don't save notebook")
+        pass
+
+    # -----------------------------------
+
+    @staticmethod
+    def convert_note_from_db(note_db) -> Note:
+        note = Note(name=note_db.title, text_note=note_db.description)
+        for tag in note_db.tags:
+            note.add_tag(tag.name)
+        return note
+
+    def get_note_from_db(self, title: str) -> Note:
+        note_db = crud_note.get_note_by_name(title=title)
+        return self.convert_note_from_db(note_db)
+
+    @staticmethod
+    def put_note_to_db(note: Note):
+        crud_note.create_note(title=note.name, description=note.text_note)
 
     def add_note(self, name: str, text_note: str = None):
         if name == '':
             raise ValueError('Name cannot be empty')
-        if not (name in self.data.keys()):
-            self.data[name] = Note(name=name, text_note=text_note)
+        if not crud_note.exist_note(title=name):
+            note = Note(name=name, text_note=text_note)
+            self.put_note_to_db(note=note)
             return f'Record "{name}" added to notebook'
         else:
             raise ValueError('This name already exists')
 
-    def del_note(self, name: str):
-        if name in self.data:
-            del self.data[name]
-            return f'Record "{name}" deleted to from notebook'
+    @staticmethod
+    def remove_note(name: str):
+        if crud_note.exist_note(title=name):
+            crud_note.remove_note(title=name)
+            return f'Note "{name}" deleted to from notebook'
         else:
             raise ValueError(f'Note "{name}" not found')
 
-    def edit_note_tag(self, name: str):
-        if not(name in self.data.keys()):
+    @staticmethod
+    def edit_note_tag(name: str):
+        if not crud_note.exist_note(title=name):
             raise ValueError(f'Note "{name}" not found')
 
-    def edit_note_tag_add(self, name: str, tag: str):
-        self.data[name].add_tag(tag)
+    @staticmethod
+    def edit_note_tag_add(name: str, tag: str):
+        crud_note.create_tag(title_note=name, name=tag)
         return f'Tag <{tag}> in note {name} added'
 
-    def edit_note_tag_del(self, name: str, tag: str):
-        self.data[name].del_tag(tag)
+    @staticmethod
+    def edit_note_tag_del(name: str, tag: str):
+        crud_note.remove_tag(note_title=name, tag_name=tag)
         return f'Tag <{tag}> in note {name} deleted'
 
-    def edit_note_text(self, name: str, text_note: str, add_text: bool):
-        if not(name in self.data.keys()):
+    @staticmethod
+    def edit_note_text(name: str, text_note: str, add_text: bool):
+        if not crud_note.exist_note(title=name):
             raise ValueError(f'Note "{name}" not found')
-        self.data[name].edit_text_note(text_note, add_text=add_text)
+        crud_note.update_note(title=name, description=text_note, add_text=add_text)
         return f'Text in note {name} changed'
 
-    def find_note(self, find_text: str):
+    @staticmethod
+    def find_note(find_text: str):
         find_result = []
-        for note in self.data.values():  # type: Note
-            # find by name or text
-            if find_text.lower() in str(note.name).lower() or find_text.lower() in str(note.text_note).lower():
-                find_result.append(f'"{note.name}"')
+        notes = crud_note.find_note(find_text=find_text)
+        for note in notes:
+            find_result.append(f'"{note.title}"')
         if len(find_result) > 0:
             return f'Notes where "{find_text}" were found: ' + ', '.join(find_result)
         return f'"{find_text}" matches not found'
 
-    def find_note_by_tag(self, find_tag: str):
+    @staticmethod
+    def find_note_by_tag(tag_name: str):
         find_result = []
-        for note in self.data.values():  # type: Note
-            # find by name or text
-            if find_tag in note.tags:
-                find_result.append(f'"{note.name}"')
-            if find_tag == '' and len(note.tags) == 0:
-                find_result.append(f'"{note.name}"')
+        notes = crud_note.find_note_by_tag(tag_name=tag_name)
+        for note in notes:
+            find_result.append(f'"{note.title}"')
         if len(find_result) > 0:
-            return f'Notes with tag "{find_tag}" were found: ' + ', '.join(find_result)
-        return f'Note with tag "{find_tag}" not found'
+            return f'Notes with tag "{tag_name}" were found: ' + ', '.join(find_result)
+        return f'Note with tag "{tag_name}" not found'
 
-    def show_note(self):
+    def show_note(self, note_title: str = ''):
+        if note_title != '':
+            return str(self.get_note_from_db(note_title))
+
         result = ''
-        for note in self.data.values():
+        notes_db = crud_note.find_note(find_text='')
+        for note_db in notes_db:
+            note = self.convert_note_from_db(note_db=note_db)
             result += str(note) + '\n'
         return result
 
-    def show_note_by_tag(self):
+    @staticmethod
+    def show_note_by_tag():
         result = ''
-        result_dict = {}
-        for note in self.data.values():
-            if len(note.tags) == 0:
-                if not ('' in result_dict.keys()):
-                    result_dict[''] = []
-                result_dict[''].append(f'"{note.name}"')
-            for tag in note.tags:
-                if not (tag in result_dict.keys()):
-                    result_dict[tag] = []
-                result_dict[tag].append(f'"{note.name}"')
-        for key, value in result_dict.items():
-            result += f'<{key}>: ' + ', '.join(value) + '\n'
+        tags_db = crud_note.tags_all()
+        notes_db = crud_note.notes_all()
+
+        for tag_db in tags_db:
+            notes = []
+            for note in tag_db.notes:
+                notes.append(f'"{note.title}"')
+            result += f'<{tag_db.name}>: ' + ', '.join(notes) + '\n'
+
+        notes = []
+        for note_db in notes_db:
+            if not note_db.tags:
+                notes.append(f'"{note_db.title}"')
+        result += f'notes without tags: ' + ', '.join(notes) + '\n'
+
         return result
+
+
+if __name__ == '__main__':
+    with Notebook() as notebook:
+        # r = notebook.get_note_from_db('Выдержать.')
+        # print(r)
+        #
+        # r = notebook.add_note('test', 'Description')
+        # print(r)
+        #
+        # print(crud_note.create_tag('test', 'asdfgh'))
+        # print(crud_note.create_tag('Выдержать.', 'asdfgh'))
+        #
+        # r = notebook.show_note()
+        # print(r)
+
+        # notebook.edit_note_text('test', ' new Description', add_text=True)
+
+        r = notebook.show_note_by_tag()
+        print(r)
+

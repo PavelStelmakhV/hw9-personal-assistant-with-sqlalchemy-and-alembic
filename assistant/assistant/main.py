@@ -7,7 +7,7 @@
 
 # import contact_book
 from contact_book import Name, Phone, Address, Birthday, Email, AddressBook, Record
-import note_book
+from note_book import Notebook, Note
 import help
 import sort
 import parser
@@ -40,7 +40,7 @@ class CLIInputOutput(AbstractInputOutput):
 class InputOutput:
     def __init__(self):
         self.contactbook: AddressBook = None
-        self.notebook: note_book.Notebook = None
+        self.notebook: Notebook = None
         self._sortfolder = sort.SortFolder()
         self._parsers = parser.Parsers()
         self._help = help.Help()
@@ -61,30 +61,33 @@ class InputOutput:
 
     @command_handler
     def note_del_handler(self, argument: str) -> str:
-        return self.notebook.del_note(argument)
+        return self.notebook.remove_note(argument)
 
     @command_handler
     def note_edit_tag_handler(self, argument: str) -> str:
         self.notebook.edit_note_tag(argument)
-        flag = self._io.user_input('input add or delete tag (a/d)')
+        flag = self._io.user_input('Input add or delete tag (a/d)')
         if flag == 'a':
-            tag = self._io.user_input('input new tag: ')
+            tag = self._io.user_input('Input new tag: ')
             return self.notebook.edit_note_tag_add(argument, tag)
         else:
-            tag = self._io.user_input('input remove tag: ')
+            tag = self._io.user_input('Input remove tag: ')
             return self.notebook.edit_note_tag_del(argument, tag)
     # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
     @command_handler
     def note_edit_handler(self, name_note: str) -> str:
-        self._io.user_output(self.notebook[name_note])
-        text_note = self._io.user_input('>')
-        flag = self._io.user_input('input add or overwrite text (a/o)')
+        self._io.user_output(str(self.notebook.get_note_from_db(name_note)))
+        flag = self._io.user_input('Input add or overwrite text (a/o)')
         if flag == 'a':
+            text_note = self._io.user_input('Enter the text to be added >>> ')
             add_text = True
         elif flag == 'o':
+            text_note = self._io.user_input('Enter new text >>> ')
             add_text = False
-        return self.notebook.edit_note_text(name_note, text_note, add_text)
+        else:
+            return 'Incorrect input'
+        return self.notebook.edit_note_text(name=name_note, text_note=text_note, add_text=add_text)
 
     @command_handler
     def note_find_by_tag_handler(self, argument: str) -> str:
@@ -100,7 +103,7 @@ class InputOutput:
 
     @command_handler
     def note_show_handler(self, argument: str) -> str:
-        return self.notebook.show_note()
+        return self.notebook.show_note(argument)
     # -------------------------------------------------
 
     @command_handler
@@ -114,27 +117,27 @@ class InputOutput:
         return result
 
     @command_handler
-    def _get_phone(self, new_old: str = None) -> Phone:
-        num_phone = self._io.user_input(f'Input {new_old} phone (format +XXXXXXXXXXXX): ')
-        if num_phone is not None:
+    def _get_phone(self, new_old: str = ' ') -> Phone:
+        num_phone = self._io.user_input(f'Input{new_old}phone (format +XXXXXXXXXXXX): ')
+        if num_phone:
             return Phone(num_phone)
 
     @command_handler
     def _get_address(self) -> Address:
         address = self._io.user_input('Input address: ')
-        if address is not None:
+        if address:
             return Address(address)
 
     @command_handler
     def _get_email(self) -> Email:
         email = self._io.user_input('Input email: ')
-        if email is not None:
+        if email:
             return Email(email)
 
     @command_handler
     def _get_birthday(self) -> Birthday:
-        birthday = self._io.user_input('Input birthday: ')
-        if birthday is not None:
+        birthday = self._io.user_input('Input birthday (dd.mm.yyyy): ')
+        if birthday:
             return Birthday(birthday)
 
     # --------------------------------------------
@@ -150,52 +153,50 @@ class InputOutput:
         num_choose = self._io.user_input('Choose a number: ')
         operation_with_record = ['_add_phone', '_remove_phone', '_change_phone', '_add_address', '_add_email',
                                  '_add_birthday']
-        self._io.user_output(operation_with_record[int(num_choose)-1])
+        # self._io.user_output(operation_with_record[int(num_choose)-1])
         command_function = getattr(self, operation_with_record[int(num_choose)-1])
         result = command_function(name)
 
-        return f'Edited record {argument}. {result}'
+        return f'{result}'
     # ------------------------------------------------------------
 
     @command_handler
     def _add_phone(self, name: Name) -> str:
-        new_phone = self._get_phone(new_old='new')
+        new_phone = self._get_phone(' new ')
         if new_phone is not None:
             return self.contactbook.edit_record(operation='_add_phone', name=name, new_phone=new_phone)
 
     @command_handler
     def _remove_phone(self, name: Name) -> str:
-        old_phone = self._get_phone(new_old='removable')
+        old_phone = self._get_phone(' removable ')
         if old_phone is not None:
-            return self.contactbook.edit_record(operation='_change_phone', name=name, old_phone=old_phone)
+            return self.contactbook.edit_record(operation='_del_phone', name=name, old_phone=old_phone)
 
     @command_handler
     def _change_phone(self, name: Name) -> str:
-        old_phone = self._get_phone(new_old='removable')
-        new_phone = self._get_phone(new_old='new')
+        old_phone = self._get_phone(' removable ')
+        new_phone = self._get_phone(' new ')
         if (old_phone is not None) and (new_phone is not None):
-            return self.contactbook.edit_record(operation='_del_phone', name=name, old_phone=old_phone,
+            return self.contactbook.edit_record(operation='_change_phone', name=name, old_phone=old_phone,
                                                 new_phone=new_phone)
 
     @command_handler
     def _add_address(self, name: Name) -> str:
         address = self._get_address()
         if address is not None:
-            return self.contactbook.edit_record(operation='_add_phone', name=name, address=address)
+            return self.contactbook.edit_record(operation='_add_address', name=name, address=address)
 
     @command_handler
     def _add_email(self, name: Name) -> str:
         email = self._get_email()
         if email is not None:
-            return self.contactbook.edit_record(operation='_add_phone', name=name, email=email)
+            return self.contactbook.edit_record(operation='_add_email', name=name, email=email)
 
     @command_handler
-    def _get_birthday(self, name: Name) -> str:
+    def _add_birthday(self, name: Name) -> str:
         birthday = self._get_birthday()
         if birthday is not None:
-            return self.contactbook.edit_record(operation='_add_phone', name=name, birthday=birthday)
-
-    #*********************************************
+            return self.contactbook.edit_record(operation='_add_birthday', name=name, birthday=birthday)
 
     @command_handler
     def contact_del_handler(self, argument: str) -> str:
@@ -207,17 +208,17 @@ class InputOutput:
 
     @command_handler
     def contact_show_handler(self, *args) -> str:
-        if len(self.contactbook) == 0:
+        if self.contactbook.count_records() == 0:
             return 'Phone book is empty'
         try:
             max_line = int(args[0])
         except ValueError:
-            max_line = len(self.contactbook)
+            max_line = self.contactbook.count_records()
         result = 'Phone book:\n'
         num_page = 0
         for page in self.contactbook.iterator(max_line=max_line):
             num_page += 1
-            result += f'<< page {num_page} >>\n' if max_line < len(self.contactbook) else ''
+            result += f'<< page {num_page} >>\n' if max_line < self.contactbook.count_records() else ''
             result += page
         return result
 
@@ -258,12 +259,11 @@ class InputOutput:
                 break
 
     def run(self):
-
-        with contact_book.AddressBook() as phonebook:
-            self.setup_phonebook(phonebook)
-            with note_book.Notebook() as notebook:
-                self.setup_notebook(notebook)
-                self.loop_input_output()
+        phonebook = AddressBook()
+        notebook = Notebook()
+        self.setup_phonebook(phonebook)
+        self.setup_notebook(notebook)
+        self.loop_input_output()
 
 
 def main():

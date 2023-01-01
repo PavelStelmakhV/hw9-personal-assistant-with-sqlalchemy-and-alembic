@@ -119,10 +119,10 @@ class Record:
 
     def put_record_to_db(self):
         contact = crud_contact.create_contact(
-            full_name=self.name.value,
-            email=self.email.value,
-            address=self.address.value,
-            birthday=self.birthday.value
+            full_name=self.name.value if self.name is not None else None,
+            email=self.email.value if self.email is not None else None,
+            address=self.address.value if self.address is not None else None,
+            birthday=self.birthday.value if self.birthday is not None else None
         )
         self.id_ = contact.id
         for phone in self.phone_list:
@@ -149,11 +149,11 @@ class Record:
         self.name = Name(contact.full_name)
         for phone in contact.phones:
             self.phone_list.append(Phone(phone.cell_phone, verify=False))
-        if contact.email != "":
+        if contact.email is not None:
             self.email = Email(contact.email)
-        if contact.address != "":
+        if contact.address is not None:
             self.address = Address(contact.address)
-        if contact.birthday != "":
+        if contact.birthday is not None:
             str_date = contact.birthday.strftime('%d.%m.%Y')
             self.birthday = Birthday(str_date)
 
@@ -168,7 +168,7 @@ class Record:
                 if phone.value == old_phone.value:
                     self.phone_list.remove(phone)
                     crud_contact.delete_phone(contact_id=self.id_, cell_phone=old_phone.value)
-            return 'Number deleted successfully'
+            return 'Number deleted successfully.'
         except KeyError:
             return f'In field {self.name.value} there is no phone number to delete'
         except ValueError:
@@ -178,7 +178,7 @@ class Record:
         try:
             self.remove_phone(old_phone)
             self.add_phone(new_phone)
-            return 'Number changed successfully'
+            return 'Number changed successfully.'
         except KeyError:
             return f'In field {self.name.value} there is no phone number to delete'
 
@@ -218,12 +218,15 @@ class Record:
         return delta.days
 
 
-class AddressBook(UserDict):
+class AddressBook():
 
-    def __enter__(self):
-        return self
+    # def __enter__(self):
+    #     #     return self
+    #     #
+    #     # def __exit__(self, exc_type, exc_val, exc_tb):
+    #     #     pass
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __init__(self):
         pass
 
     @staticmethod
@@ -235,11 +238,15 @@ class AddressBook(UserDict):
             record = Record()
             record.get_record_from_db(num_contact=num_contact)
             count += 1
-            result = result + str(record)
+            result = result + str(record) + '\n'
             if count >= max_line or num_contact >= total_line_bd-1:
                 yield result
                 result = ''
                 count = 0
+
+    @staticmethod
+    def count_records():
+        return crud_contact.get_count()
 
     @staticmethod
     def get_id_record(name: Name):
@@ -265,18 +272,18 @@ class AddressBook(UserDict):
         record.get_record_from_db()
         match operation:
             case '_add_phone':
-                record.add_phone(new_phone=new_phone)
+                result = record.add_phone(new_phone=new_phone)
             case '_del_phone':
-                record.remove_phone(old_phone=old_phone)
+                result = record.remove_phone(old_phone=old_phone)
             case '_change_phone':
-                record.change_phone(old_phone=old_phone, new_phone=new_phone)
+                result = record.change_phone(old_phone=old_phone, new_phone=new_phone)
             case '_add_email':
-                record.set_email(email=email)
+                result = record.set_email(email=email)
             case '_add_address':
-                record.set_address(address=address)
+                result = record.set_address(address=address)
             case '_add_birthday':
-                record.set_birthday(birthday=birthday)
-        return f'Edited contact {str(record)}'
+                result = record.set_birthday(birthday=birthday)
+        return f'{result} Edited contact {str(record)}'
 
     @staticmethod
     def remove_record(name: Name):
@@ -303,8 +310,9 @@ class AddressBook(UserDict):
         for contact in contacts:
             record = Record()
             record.extract_contact(contact)
-            if int(record.days_to_birthday()) == int(day):
-                find_result.append(str(record))
+            if record.birthday is not None:
+                if int(record.days_to_birthday()) == int(day):
+                    find_result.append(str(record))
         if len(find_result) > 0:
             return f'Birthday records in {day} days:\n' + '\n'.join(find_result)
         return f'no records with birthdays after {day} days'
@@ -312,26 +320,32 @@ class AddressBook(UserDict):
 
 if __name__ == '__main__':
 
-    with AddressBook() as book:
+    # book = AddressBook()
+    #
+    # if crud_contact.get_count() == 0:
+    #     print('Phone book is empty')
 
-        if crud_contact.get_count() == 0:
-            print('Phone book is empty')
+    rec = Record(Name('Misha_3'))
+    # print(rec.email)
+    rec.put_record_to_db()
 
-        # max_line = 7
-        # result_ = 'Phone book:\n'
-        # num_page = 0
-        # for page in book.iterator(max_line=max_line):
-        #     num_page += 1
-        #     result_ += f'<< page {num_page} >>\n' if max_line < crud_contact.get_count() else ''
-        #     result_ += page
-        # print(result_)
+    # max_line = 7
+    # result_ = 'Phone book:\n'
+    # num_page = 0
+    # for page in book.iterator(max_line=max_line):
+    #     num_page += 1
+    #     result_ += f'<< page {num_page} >>\n' if max_line < crud_contact.get_count() else ''
+    #     result_ += page
+    # print(result_)
 
-        # r = book.add_record(name=Name('Misha_6'), phone=Phone('+380961234567'), address=Address('За углом'),
-        #                 email=Email('qwerty@ukr.net'), birthday=Birthday('10.11.2000'))
-        # print(r)
-        # r = book.edit_record(name=Name('Misha_6'), operation='_del_phone', old_phone=Phone('+380501111111'))
-        # print(r)
+    # r = book.add_record(name=Name('Misha_6'), phone=Phone('+380961234567'), address=Address('За углом'),
+    #                 email=Email('qwerty@ukr.net'), birthday=Birthday('10.11.2000'))
+    # print(r)
+    # r = book.edit_record(name=Name('Misha_6'), operation='_del_phone', old_phone=Phone('+380501111111'))
+    # print(r)
 
-        # r = book.remove_record(name=Name('Misha_6'))
-        # print(r)
-        print(book.show_record_with_birthday(18))
+    # r = book.remove_record(name`=Name('Misha_6'))
+    # print(r)
+    # print(book.show_record_with_birthday(18))
+
+

@@ -17,6 +17,7 @@ def parser_handler(func):
 def command_handler(func):
     @functools.wraps(func)
     def wrapper(*args):
+        # return func(*args)
         try:
             return func(*args)
         except ValueError as e:

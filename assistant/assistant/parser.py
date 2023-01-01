@@ -101,7 +101,7 @@ class Parsers:
 
     @staticmethod
     def _note_show(user_input: str):
-        return "note show", ''
+        return "note show", user_input
 
     # -------------- C O N T A C T ---------------------
 
@@ -135,7 +135,7 @@ class Parsers:
 
     @staticmethod
     def _contact_show(user_input: str):
-        return "contact show", ''
+        return "contact show", user_input
 
     @staticmethod
     def _contact_birthday(user_input: str):

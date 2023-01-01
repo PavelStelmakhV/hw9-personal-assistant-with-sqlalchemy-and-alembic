@@ -16,27 +16,3 @@ class Help:
         for i in self.__commands_desc:
             result += i + '\n'
         return result
-
-    'hello',
-    'close',
-    '',
-    'exit',
-
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-
-
-    '',
-
-    'contact find',
-    'contact show',
-
-    '',
-
-    '',
